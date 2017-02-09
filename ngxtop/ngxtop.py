@@ -65,6 +65,7 @@ import sqlite3
 import time
 import sys
 import signal
+import numpy as np
 
 try:
     import urlparse
@@ -287,6 +288,10 @@ def build_processor(arguments):
         selections = ', '.join('avg(%s)' % var for var in fields)
         query = 'select %s from log' % selections
         report_queries = [(label, query)]
+    elif arguments['percentile']:
+        selections = ', '.join('np.percentile(%s,90)' % var for var in fields)
+        query = 'select %s from log' % selections
+        report_queries = [(query)]
     elif arguments['sum']:
         label = 'sum %s' % fields
         selections = ', '.join('sum(%s)' % var for var in fields)
