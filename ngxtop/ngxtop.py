@@ -2,7 +2,7 @@
 
 Usage:
     ngxtop [options]
-    ngxtop [options] (print|top|avg|sum) <var> ...
+    ngxtop [options] (print|top|avg|sum|percentile) <var> ...
     ngxtop info
     ngxtop [options] query <query> ...
 
@@ -56,15 +56,17 @@ Examples:
     $ ssh remote tail -f /var/log/apache2/access.log | ngxtop -f common
 """
 from __future__ import print_function
+
 import atexit
-from contextlib import closing
 import curses
 import logging
 import os
-import sqlite3
-import time
-import sys
 import signal
+import sqlite3
+import sys
+import time
+from contextlib import closing
+#import scipy.stats as st
 import numpy as np
 
 try:
@@ -289,9 +291,20 @@ def build_processor(arguments):
         query = 'select %s from log' % selections
         report_queries = [(label, query)]
     elif arguments['percentile']:
-        selections = ', '.join('np.percentile(%s,90)' % var for var in fields)
-        query = 'select %s from log' % selections
-        report_queries = [(query)]
+        limit = int(arguments['--limit'])
+        report_queries = []
+        for var in fields:
+            label = 'percentile %s' % var
+            query = 'select %s, count(1) as count from log group by %s order by count desc limit %d' % (var, var, limit)
+# Надо написать ебучий запрос к ебучему sqlite. Я говнокодер!!!
+            numarr = np.array['select %s from log'] ## Да-да, вот здесь
+            perc50 = np.percentile(numarr, 50)
+            perc90 = np.percentile(numarr, 90)
+            perc95 = np.percentile(numarr, 95)
+            perc99 = np.percentile(numarr, 99)
+
+            report_queries.append((query, label, perc50, perc90, perc95, perc99))
+
     elif arguments['sum']:
         label = 'sum %s' % fields
         selections = ', '.join('sum(%s)' % var for var in fields)
